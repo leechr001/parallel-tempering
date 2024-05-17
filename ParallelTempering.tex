@@ -1,0 +1,385 @@
+
+\documentclass{amsart}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bbm}
+\usepackage{mathdots,mathtools}
+\usepackage{dsfont}
+\usepackage{todonotes,lscape}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{tabularx}
+\usepackage{subcaption}
+\usepackage{comment}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{spalign}
+%\spalignmat{[column alignment]}{text}
+
+\newtheorem{definition}{Definition}[section]
+\newtheorem{theorem}[definition]{Theorem}
+\newtheorem{lemma}[definition]{Lemma}
+\newtheorem{example}[definition]{Example}
+\newtheorem{proposition}[definition]{Proposition}
+\newtheorem{corollary}[definition]{Corollary}
+\newtheorem*{corollary*}{Corollary}
+\newtheorem{property}[definition]{Property}
+\newtheorem{principle}{Principle}
+\newtheorem{conjecture}[definition]{Conjecture}
+\newtheorem{problem}[definition]{Problem}
+\newtheorem{remark}[definition]{Remark}
+\newcommand\defeq{\stackrel{\mathclap{\small\normalfont\mbox{def}}}{~=~}}
+
+\newcommand{\1}{\mathbbm{1}}
+\newcommand{\D}{D_\pi^{1/2}}
+\newcommand{\Dm}{D_\pi^{-1/2}}
+\newcommand{\R}{\mathbb{R}}
+\renewcommand{\S}{\mathbb{S}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\mb}{\mathbf}
+\renewcommand{\phi}{\varphi}
+\newcommand{\eff}{\operatorname{efficacy}}
+\newcommand{\row}{\operatorname{row}}
+
+\title{Parallel tempering speeds up mixing of markov chains}
+\author{Chris Lee}
+\date{May 2022}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+Parallel Tempering (PT) is a method of speeding up the convergence of Metropolis-Hasting based Markov Chain Monte Carlo (MCMC) methods. Samberg \cite{samberg} showed that in practice it performs significantly better on multi-modal distributions. However, there is not yet a generalized proof of this observation. Fischer and Christian \cite{FI} give a proof for restricted Boltzman Machines and Woodard, Schmidler, and Huber \cite{WSH} give conditions for PT algorithms to be torpidly mixing. In this paper we give an upper bound for PT of a birth and death chain on hypercubes by showing the spectral gap $\lambda^*_{PT}$, is strictly less than that of independent untempered chains.
+
+\section{Background}
+\subsection{The Metropolis-Hastings Algorithm}
+First we review the metropolis algorithm. Let $X$ be a finite set and $\pi(x)$ be a positive probability on $X$. Let $S(x,y)$ be the transition matrix of our base chain, which we pick to be a symmetric, irreducible Markov chain on $X$. Then we define $M(x,y)\in X^2$ to be our Metropolis chain. We get it by ``thinning down" the base chain by the following:
+    
+\begin{equation}
+    M(x,y)=\begin{cases}
+        \frac{\pi(y)}{\pi(x)}S(x,y)& \text{ if } \frac{\pi(y)}{\pi(x)}<1\\
+        S(x,y)& \text{ if } \frac{\pi(y)}{\pi(x)}\geq 1 \text{ and } x\neq y\\
+        S(x,x)+\sum_{z\neq x}S(x,z)\left(1-\frac{\pi(x)}{\pi(z)}\right) & \text{ if } x=y
+    \end{cases}
+\end{equation}
+
+This describes the process of sampling a possible step via $S(x,y)$. Then if $\frac{\pi(y)}{\pi(x)}\geq 1$ we take the step. If $\frac{\pi(y)}{\pi(x)}<1$ we flip a coin with probability $\frac{\pi(y)}{\pi(x)}$. If the coin flip succeeds we take the step. In the case where $x=y$ we get the transition probability by observing that in all cases where the ratio $\frac{\pi(z)}{\pi(x)}$ of a proposed step to $z$ is less than one and the coin flip fails we don't step. This resulting chain is irreducible and aperiodic. Furthermore, the chain has stationary distribution $\pi$.  
+
+\subsection{Parallel Tempering}
+Let $M_1$ and $M_2$ be parallel independent metropolis chains on a state space $X$ with target distributions $\pi_1$ and $\pi_2$ respectively. Then let $M\in (X,X)^2$ such that $M=M_1\otimes M_2$. It is easy to see that $M$ is the joint chain with stationary distribution $\pi(x,y)=\pi_1(x)\pi_2(y)$. The goal of parallel tempering is to swap the states of $M_1$ and $M_1$ without changing their joint target stationary distribution $\pi(x,y)$. This is done by proposing the swap as a Metropolis-Hastings update. That is, we accept a step from $(x,y)\in X^2$ to $(y,x)\in X^2$ with probability 
+\begin{equation*}
+    \min\left\{1,\frac{\pi(y,x)}{\pi(x,y)}\right\}
+\end{equation*}
+Equivalently, the swap is accepted with probability 1 if $\frac{\pi_1(x)}{\pi_2(x)}\leq \frac{\pi_1(y)}{\pi_2(y)}$ and accepted with probability $\frac{\pi(y,x)}{\pi(x,y)}$ otherwise. We will denote the transition matrix of this chain $P\in (X,X)^2$.
+
+\section{Defintions and Notation}
+\begin{definition}{\label{def:T}}
+    Let $M=M_1\otimes M_2$ where $M_1,M_2\in X^2$ are Metropolis chains with stationary distributions $\pi_1\neq \pi_2$. We then define the ``temper step" matrix $T\in (X,X)^2$ in the following way. Let $(x,y)\in (X,X)$. If $y=x$,
+    \begin{equation}
+        T((x,y),(x,y))=1
+    \end{equation}
+    If $y\neq x$,
+    \begin{equation}
+        T((x,y),(x,y))=\begin{cases}
+            1-\frac{\pi(y,x)}{\pi(x,y)} & \frac{\pi_1(x)}{\pi_2(x)}\leq \frac{\pi_1(y)}{\pi_2(y)}\\[5pt]
+            0 & \frac{\pi_1(x)}{\pi_2(x)}> \frac{\pi_1(y)}{\pi_2(y)}
+        \end{cases}
+    \end{equation}
+    \begin{equation}
+        T((x,y),(y,x))=\begin{cases}
+            \frac{\pi(y,x)}{\pi(x,y)} & \frac{\pi_1(x)}{\pi_2(x)}\leq \frac{\pi_1(y)}{\pi_2(y)}\\[5pt]
+            1 & \frac{\pi_1(x)}{\pi_2(x)}> \frac{\pi_1(y)}{\pi_2(y)}
+        \end{cases}
+    \end{equation}
+    Finally, for any $(z,w)\in(X,X)^2$ such that $(z,w)\neq (x,y)$ and $(z,w)\neq (y,x)$,
+    \begin{equation}{\label{eq:T0}}
+        T((x,y),(z,w))=0
+    \end{equation}
+\end{definition}
+As a sanity check, we note that in each case, $T((x,y),(x,y))+T((x,y),(y,x))=1$. Thus $T$ is stochastic as it should be. The reader may find the following example helpful for visualizing $T$. 
+\begin{example}
+    Let $M_1,M_2\in [0,3]^2$ be such that $\pi_1(x)=\theta_1^x/(1+\theta_1)^d$ and $\pi(y)=\theta_2^y/(1+\theta_2)^d$ with $\theta_1 < \theta_2$. Now let $\beta=\frac{\theta_1}{\theta_2}$. Then $T\in ([0,2],[0,2])^2$ is the following matrix,
+
+    \[T=\begin{pmatrix}
+    %(0,0)  (0,1)     (0,2)     (1,0)     (1,1)     (1,2)     (2,0)     (2,1)      (2,2)
+        1 &   0     &   0     &   0     &   0     &   0     &   0     &   0     &    0\\% (0,0)
+        0 &1-\beta  &   0     & \beta   &   0     &   0     &   0     &   0     &    0\\% (0,1)
+        0 &   0     &1-\beta^2&   0     &   0     &   0     & \beta^2 &   0     &    0\\% (0,2)
+        0 &   1     &   0     &   0     &   0     &   0     &   0     &   0     &    0\\% (1,0)
+        0 &   0     &   0     &   0     &   1     &   0     &   0     &   0     &    0\\% (1,1)
+        0 &   0     &   0     &   0     &   0     & 1-\beta &   0     & \beta   &    0\\% (1,2)
+        0 &   0     &   1     &   0     &   0     &   0     &   0     &   0     &    0\\% (2,0)
+        0 &   0     &   0     &   0     &   0     &   1     &   0     &   0     &    0\\% (2,1)
+        0 &   0     &   0     &   0     &   0     &   0     &   0     &   0     &    1  % (2,2)
+    \end{pmatrix} \]
+\end{example}    
+
+We will frequently refer to the the points in $(X,X)$ which cause the temper matrix to swap. As such we give the following notation. Let 
+\begin{equation}
+S=\left\{(x,y)\in X\times X:x\neq y \text{ and }\frac{\pi_1(x)}{\pi_2(x)}\leq \frac{\pi_1(y)}{\pi_2(y)}\right\}.
+\end{equation} 
+Intuitively, $S$ is the points which do not accept the swap with probability 1. Also note that for all $x\neq y$, if the point $(x,y)\in S$ then the swapped point $(y,x)$ is not. 
+
+\subsection{Verifying the Temper Step Matrix}
+Next, we show that the proposed temper step matrix $T$ satisfies key properties. Namely, that it preserves the stationary distribution $\pi$, as promised, and that it is reversible with respect to $\pi$.
+
+\begin{lemma}\label{lem:pi}
+    Let $M_1,M_2\in X^2$ be transition matrices of two metropolis chains with stationary distributions $\pi_1$ and $\pi_2$. Then let $T$ be the temper step matrix as described in definition \ref{def:T}. Then the stationary distribution of $M=M_1\otimes M_2$ and the stationary distribution of $P=MT$ are the same.
+\end{lemma}
+\begin{proof}
+    Let $\pi_M$ be the stationary distribution of $M$. Then by properties of the Kronecker product $\pi_M=\pi_1\otimes \pi_2$. We show that this is the an eigenvector of $P$ with eigenvalue 1. Let $\pi_M(x,y)$ be the $(x,y)$ entry of $\pi_M$. Without loss of generality let $(x,y)\in S$. Then observe 
+    \begin{align*}
+        (\pi_MT)(x,y)&=\pi(x,y)\left(1-\frac{\pi(y,x)}{\pi(x,y)}\right)+\pi(y,x)\\
+        &=\pi(x,y)-\pi(y,x)+\pi(y,x)\\
+        &=\pi(x,y).
+    \end{align*}
+    If $(x,y)$ not in $S$ then if $x=y$,
+    \begin{align*}
+        (\pi_MT)(x,y)&=\pi(x,y).
+    \end{align*}
+    If $x\neq y$, then we have
+    \begin{align*}
+        (\pi_MT)(y,x)&=\pi(x,y)\frac{\pi(y,x)}{\pi(x,y)}\\
+        &=\pi(y,x).
+    \end{align*}
+    Thus for any $(x,y)$ we have $(\pi_M MT)(x,y)=(\pi_MT)(x,y)=\pi(x,y)$ and the stationary distribution is preserved.
+\end{proof}
+
+\begin{lemma}\label{lem:M_rev}
+    The matrix $M$ is reversible with respect to $\pi_M$.
+\end{lemma}
+\begin{proof}
+    Using the reversibility of the independent markov chains $M_1$ and $M_2$
+    \begin{align*}
+        \pi(x,y)M((x,y),(y,x))&=\pi_1(x)\pi_2(y)M_1(x,y)M_2(y,x)\\
+        &=(\pi_1(x)M_1(x,y))(\pi_2(y)M_2(y,x))\\
+        &=(\pi_1(y)M_1(y,x))(\pi_2(x)M_2(x,y))\\
+        &=\pi(y,x)M((y,x),(x,y)).
+    \end{align*}
+\end{proof}
+
+\begin{lemma}\label{lem:T_rev}
+    The matrix $T$ is reversible with respect to $\pi_M$.
+\end{lemma}
+\begin{proof}
+    Let $(x,y),(y,x)\in (X,X)^2$ be an element of $T$. If $T((x,y),(y,x))=0$ then $T((y,x),(x,y))=0$ as needed. If $T((x,y),(y,x))$ is on the diagonal then clearly this element is reversible, as the diagonals are not affected by transposition. Finally, let $T((x,y),(y,x))$ be a nonzero, nondiagonal element of $T$. Then, if without loss of generality let $T((x,y),(y,x))$ below the diagonal. Now, 
+    \begin{align*}
+        \pi(x,y)T((x,y),(y,x))&=\pi(x,y)\\
+        &=\pi(x,y)\left(\frac{\pi(y,x)}{\pi(y,x)}\right)\\
+        &=\pi(y,x)\left(\frac{\pi(x,y)}{\pi(y,x)}\right)\\
+        &=\pi(y,x)T((y,x),(x,y)).
+    \end{align*}
+\end{proof}
+
+\begin{proposition}\label{prop:P_rev}
+    The matrix $P=MT$ is reversible.
+\end{proposition}
+\begin{proof}
+    By Lemma \ref{lem:pi} we know that $P=MT$ has stationary distribution $\pi_M$. Then by Lemma \ref{lem:M_rev} and Lemma \ref{lem:T_rev} we have,
+    \begin{align*}
+        \pi(x,y) \cdot MT((x,y),(y,x))&=\pi(x,y) \sum_{(z,w)\in (X,X)} M((x,y),(z,w))\cdot T((z,w),(y,x))\\
+        &=\sum_{(z,w)\in (X,X)} \pi(x,y)M((x,y),(z,w))\cdot T((z,w),(y,x))\\
+        &=\sum_{(z,w)\in (X,X)} \pi(z,w)M((z,w),(x,y))\cdot T((z,w),(y,x))\\
+        &=\sum_{(z,w)\in (X,X)} M((z,w),(x,y))\cdot \pi(z,w)T((z,w),(y,x))\\
+        &=\sum_{(z,w)\in (X,X)} M((z,w),(x,y))\cdot \pi(y,x)T((y,x),(z,w))\\
+        &=\pi(y,x)\sum_{(z,w)\in (X,X)} M((z,w),(x,y))\cdot T((y,x),(z,w))\\
+        &=\pi(y,x) \cdot MT((y,x),(x,y)).
+    \end{align*}
+    Thus $\pi(x,y)P((x,y),(y,x))=\pi(y,x) \cdot P((y,x),(x,y))$ which implies $P$ is reversible. 
+\end{proof}
+
+\subsection{Reversible Matrices have a Symmetric Conjugate}
+In order to analyze the eigenvalues and eigenvectors of $P$ we want to be able to take spectral decompositions. In order to do this we need the matrices to be symmetric. Luckily, reversible markov chains become symmetric when conjugated by the matrix $\D$.
+
+\begin{definition}
+    Let $D_\pi^{1/2}$ be a diagonal matrix with entries $\sqrt{\pi(x,y)}$. Similarly, let $D_\pi^{-1/2}$ be it's inverse, a diagonal matrix with entries $\frac{1}{\sqrt{\pi(x,y)}}$. 
+\end{definition}
+\begin{corollary}\label{cor:sym}
+    The matrices $\mathcal{P}=\D P\Dm$, $\mathcal{M}=\D M\Dm$, and $\mathcal{T}=\D T\Dm$ are symmetric.
+\end{corollary}
+\begin{proof}
+    By Lemmas \ref{lem:M_rev} and \ref{lem:T_rev} and Proposition \ref{prop:P_rev}, each of the matrices are reversible. It then follows from simple computation (recalling the defintion of $\D$ and $\Dm$) that these are symmetric.
+\end{proof}
+
+Additionally, we give some basic results about the properties of these matrices.
+
+\begin{lemma}\label{lem:D_eig}
+    Let $A$ be a matrix with eigenvalues $\lambda_1,\dots,\lambda_n$ and associated eigenvectors $\Psi_{1},\dots,\Psi_{n}$. If $\mathcal{A}=\D A\Dm$ then $\mathcal{A}$ has eigenvalues $\lambda_1,\dots,\lambda_n$ with associated eigenvectors $\varPsi_i=\D\Psi_{i}$ for $1\leq i \leq n$.
+\end{lemma}
+\begin{proof}
+    Because $\D\Dm=I$, where $I$ is the identity matrix, $\mathcal{A}$ is similar to $A$. Thus the eigenvalues are the same. Then, we can simply compute the eigenvectors as follows:
+    \begin{align*}
+        \D A\Dm \varPsi&=\D A\Dm \left(\D\Psi\right)\\
+        &=\D A\Psi\\
+        &=\D\lambda\Psi\\
+        &=\lambda\varPsi.
+    \end{align*}
+    We note that $\Dm B\D=A$ so we can use the same method to deduce the eigensystem of $A$ from $\mathcal{A}$.
+\end{proof}
+
+Finally, because $\pi$ is the stationary distribution of $P$ we get one more property that will be useful later.
+\begin{lemma}
+    A vector $x$ is orthogonal to $\D\1$ if and only if the vector $y=\mathcal{P}x=\D MT\Dm x$ is orthogonal to $\D\1$.
+\end{lemma}
+\begin{proof}
+    Observe,
+    \begin{align*}
+        (\D\1)^\top y&=\1^\top \D (\D MT\Dm x)\\
+        &=\1^\top D^1_\pi MT\Dm x)\\
+        &=\pi MT\Dm x)\\
+        &=(\pi \Dm)x\\
+        &=\1^\top \D x\\
+        &=(\D\1)^\top x
+    \end{align*}
+    Therefore, $(\D\1)^\top y=0$ if and only if $(\D\1)^\top x=0$. It follows that $y$ is orthogonal to $\D\1$ if and only if $x$ is orthogonal to $\D\1$.
+\end{proof}
+
+\section{The Spectrum of the Temper Step Matrix}
+To prove the main result we need a few Lemmas about the spectrum of $T$ and it's relationship to the sprectrum of $M$. We also state the Rayleigh Quotient which we will use to bound eigenvalues. 
+
+\begin{lemma}\label{lem:eigen}
+    Let $T$ be as defined in \ref{def:T}. Then the eigenvalues of $T$ are $1$ and $-\frac{\pi(y,x)}{\pi(x,y)}$ where $(x,y)\in S$. The eigenspace $\Lambda_1=\{\Psi_T: T\Psi_T=\Psi_T\}$ has an orthogonal basis of eigenvectors of the form either:
+    \begin{align*}
+        \Psi &= e_{(z,z)}
+    \end{align*}
+    where $k\in X$, or 
+    \begin{align*}
+        \Psi &= e_{(x,y)}+e_{(y,x)}\\
+    \end{align*}
+    where $x\neq y$. Note that $e_{(i,j)}$ is the standard basis vector corresponding to the row $(i,j)\in (X,X)$. The remaining eigenspaces have dimension 1. Let $(x,y)\in S$. Then $-\frac{\pi(y,x)}{\pi(x,y)}$ is an eigenvalue with multiplicity 1 and unique eigenvector
+    \begin{equation*}
+        \Psi=-\frac{\pi(y,x)}{\pi(x,y)}e_{(x,y)}+ e_{(y,x)}
+    \end{equation*}
+\end{lemma}
+%TODO: edit with new notation.
+\begin{proof}
+    We first prove that $\Psi = e_{(z,z)}\in\Lambda_1$ is an eigenvector. Let $z\in X$. Then $T\Psi$ is the $(z,z)$ column of $T$. Observe that by defintion \ref{def:T}, we know that $T((z,z),(z,z))=1$. Additionally, for any other element $(x,y)\in (X,X)$ we have $T((x,y),(z,z))=0$. Thus, 
+    
+    $$T\Psi=e_{(z,z)}=\Psi$$
+    
+    and $\Psi = e_{(z,z)}$ is an eigenvector with eigenvalue $\lambda=1$. Additionally, there are $|X|$ distinct choices of $z$. Thus there are $|X|$ many eigenvectors of this form. Now we prove $\Psi = e_{(x,y)}+e_{(y,x)}$ is in eigenvector with eigenvalue $\lambda=1$. Let $(x,y)\in S$. Then using condition \ref{eq:T0} of defintion \ref{def:T} we get that the only possible nonzero values of $T\Psi$ are 
+    \[T\Psi(x,y)= T((x,y),(x,y))+ T((x,y),(y,x))\] 
+    and 
+    \[T\Psi(y,x)=T((y,x),(x,y)) + T((y,x),(y,x)).\] 
+    Because $(x,y)\in S$ it must be true that $T((x,y),(x,y))=1-\frac{\pi(y,x)}{\pi(x,y)}$ and $T((x,y),(y,x))=\frac{\pi(y,x)}{\pi(x,y)}$. Thus,
+
+    \[T\Psi(x,y)=1-\frac{\pi(y,x)}{\pi(x,y)}+\frac{\pi(y,x)}{\pi(x,y)}=1.\]
+
+    Additionally, because $(x,y)\in S$ it must be that $(y,x)\not\in S$. As such,
+
+    \[\frac{\pi_1(y)}{\pi_2(y)}> \frac{\pi_1(x)}{\pi_2(x)}.\]
+
+    By defintion \ref{def:T} it must be the case that $T((y,x),(y,x))=0$ and $T((y,x),(x,y))=1$. So,
+
+    \[T\Psi(y,x)=1.\]
+
+    Thus we have that $T\Psi=e_{(x,y)}+e_{(y,x)}=1\cdot \Psi$. We have one eigenvector of this form for each $(x,y)\in S$. Recalling the defintion of $S$, it follows from symmetry that half of the $|X|(|X|-1)$ pairs $(x,y)$ with $x\neq y$ are in $S$. Thus there are $|X|(|X|-1)/2$ eigenvectors of the form $T\Psi=e_{(x,y)}+e_{(y,x)}$, each with eigenvalue $\lambda=1$. Lastly, because each $e_{(x,y)}$ is orthgonal to every other basis vector, the eigenvectors in $\Lambda_1$ are orthogonal.
+
+    \vskip 0.5cm
+
+    Now we show that $\Psi=-\frac{\pi(y,x)}{\pi(x,y)}e_{(x,y)}+ e_{(y,x)}$ is an eigenvector with eigenvalue $\lambda= -\frac{\pi(y,x)}{\pi(x,y)}$. Again, let $(x,y)\in S$ using condition \ref{eq:T0} of defintion \ref{def:T} we get that the only possible nonzero values of $T\Psi$ are 
+    \[-\frac{\pi(y,x)}{\pi(x,y)}T((x,y),(x,y))+ T((x,y),(y,x))\] 
+    and 
+    \[-\frac{\pi(y,x)}{\pi(x,y)}T((y,x),(x,y))+T((y,x),(y,x)).\] 
+    From defintion \ref{def:T} we have $T((y,x),(y,x))=0$ and $T((y,x),(x,y))=1$ so 
+    \[T\Psi(x,y)=-\frac{\pi(y,x)}{\pi(x,y)}\left(1-\frac{\pi(y,x)}{\pi(x,y)}\right)+\frac{\pi(y,x)}{\pi(x,y)}=\left(\frac{\pi(y,x)}{\pi(x,y)}\right)^2.\]
+    Likewise,
+    \[T\Psi(y,x)=-\frac{\pi(y,x)}{\pi(x,y)}(1)+\frac{\pi(y,x)}{\pi(x,y)(0)}=-\frac{\pi(y,x)}{\pi(x,y)}.\]
+    Then we can compute
+    \[T\Psi=\left(\frac{\pi(y,x)}{\pi(x,y)}\right)^2e_{(x,y)}-\frac{\pi(y,x)}{\pi(x,y)}e_{(y,x)}=-\frac{\pi(y,x)}{\pi(x,y)}\Psi.\]
+    Therefore $\Psi= -\frac{\pi(y,x)}{\pi(x,y)}e_{(x,y)}+ e_{(y,x)}$ is an eigenvector with eigenvalue $\lambda=-\frac{\pi(y,x)}{\pi(x,y)}$. By the same symmetry argument as above there are $|X|(|X|-1)/2$ eigenvectors of this form. It is clear that $\Psi= -\frac{\pi(y,x)}{\pi(x,y)}e_{(x,y)}+ e_{(y,x)}$ is not in the span of any standard basis vector. Additionally, the $e_{(x,y)}$ component of $\Psi$ has opposite sign of the $e_{(y,x)}$ component. Thus it is not in the span of eigenvectors of the form $e_{(x,y)}+e_{(y,x)}$. Thus each $\Psi= -\frac{\pi(y,x)}{\pi(x,y)}e_{(x,y)}+ e_{(y,x)}$ is a distinct eigenvector. Since we have constructed $|X|(|X|-1)/2+|X|(|X|-1)/2+|X|=|X|^2$ linearly independent eigenvectors we know that there are no more.
+\end{proof}
+
+\section{Bounding the Spectral Gap of Parallel Tempering}
+\begin{lemma}\label{lem:main}
+    Let $A$ and $B$ be trasition matrices of metropolis chains with eigenvectors $\Psi_{A,i}$ and $\Psi_{B,i}$ corresponding to the $i$th largest eigenvalues $\lambda_{A,i}$ and $\lambda_{B,i}$, respectively. Let $M$ and $T$ be such that $MT=(A\otimes B)T$, the transition matrix of $P$. Additionally, let $\Psi_{P,i}$ be the eigenvector corresponding to the $i$th largest eigenvalue $\lambda_{P,i}$ of $P$. Finally, let $\Lambda_1=\{\Psi_T: T\Psi_T=\Psi_T\}$. Then 
+    \[(\Psi_{A,1}\otimes \Psi_{B,2})\not \in \Lambda_1\]
+    and 
+    \[(\Psi_{A,2}\otimes \Psi_{B,1})\not \in \Lambda_1\]
+\end{lemma}
+\begin{proof}
+    Assume for contradition $\Psi_{P,2}=\Psi_{A,1}\otimes \Psi_{B,2}$. Observe that because $M=A\otimes B$, by properties of the Kronecker product $\Psi_{A,1}\otimes \Psi_{B,2}$ is an eigenvector of $M$. Thus is suffices to show that for all $x$  orthogonal to $\Psi_{P,1}=\1$, the vector $Tx\neq \Psi_{A,1}\otimes \Psi_{B,2}$. Because $B$ is stochastic $\Psi_{B,2}\neq \1$ and there is $i,j\in X$ with $i\neq j$ such that 
+    $$\Psi_{B,2}(i)\neq \Psi_{B,2}(j).$$ 
+    Then, because $A$ is also stochastic $\Psi_{P,2}(\cdot, i)\neq \Psi_{P,2}(\cdot, j)$. In particular, we have that 
+    $$\Psi_{P,2}(j, i)\neq \Psi_{P,2}(i, j).$$
+    However, by Lemma \ref{lem:eigen} these elements are not in the span of any vector of $\Lambda_1$ as the only eigenvectors in $\Lambda_1$ that with either $\Psi_{P,2}(j, i)\neq 0$ or $\Psi_{P,2}(i, j)\neq 0$ have that $\Psi_{P,2}(j, i)=\Psi_{P,2}(i, j)$. Thus $(\Psi_{A,1}\otimes \Psi_{B,2})\not \in \Lambda_1$. We now show $(\Psi_{A,2}\otimes \Psi_{B,1})\not \in \Lambda_1$ in the same way. Because $A$ is stochastic $\Psi_{A,2}\neq \1$ and there is $i,j\in X$ with $i\neq j$ such that 
+    $$\Psi_{A,2}(i)\neq \Psi_{A,2}(j).$$ 
+    Then, because $B$ is also stochastic $\Psi_{P,2}(i,\cdot )\neq \Psi_{P,2}(j, \cdot)$. In particular, we have that 
+    $$\Psi_{P,2}(i,j)\neq \Psi_{P,2}(j, i).$$
+    However, by Lemma \ref{lem:eigen} these elements are not in the span of any vector of $\Lambda_1$ as the only eigenvectors in $\Lambda_1$ that with either $\Psi_{P,2}(j, i)\neq 0$ or $\Psi_{P,2}(i, j)\neq 0$ have that $\Psi_{P,2}(j, i)=\Psi_{P,2}(i, j)$. Thus $(\Psi_{A,2}\otimes \Psi_{B,1})\not \in \Lambda_1$.
+\end{proof}
+
+The last thing we need before we can prove the main result is the Min-Max Theorem of Rayleigh Quotients. This was proved in [?]. We state the result here.
+
+\begin{theorem}\label{thm:ray}
+    Let $A$ be Hermitian with eigenvalues $\lambda_1,\dots,\lambda_k,\dots,\lambda_n$. Then,
+
+    \[\lambda_k=\min_{\substack{U\\\dim(U)=k}}\max_{\substack{x\in U\\x\neq 0}} \frac{||Ax||}{||x||}\]
+\end{theorem}
+
+With this we can now prove the main result of the paper.
+\subsection{Main Result}
+
+\begin{theorem}
+    Let $\lambda^*_{P}$ be the second largest eigenvalue of the transition matrix of the parallel tempered chain $P$. Let $\lambda^*_{M}$ be the second largest eigenvalue of the transition matrix $M$, the joint chain of two independent Metropolis chains. Then,
+    \[\lambda^*_{P}<\lambda^*_M\]
+\end{theorem}
+
+\begin{proof}
+    By proposition \ref{prop:P_rev} we know $P$ is reversible. Thus it is similar to the matrix $\mathcal{P}=\D P\Dm$ which is symmetric. By \ref{lem:D_eig} and Theorem \ref{thm:ray} we know
+    \begin{equation}\label{eq:P}
+        \lambda^*_P=\max_{x\perp \D\Psi_{P,1}} \frac{||\D P\Dm x||}{||x||}.
+    \end{equation}
+    Then we can multiply by the identity $I$ as follows:
+    \begin{align*}
+        \D P\Dm &= \D MT \Dm\\
+        &=\D MIT \Dm\\
+        &=\D M\Dm \D T\Dm \\
+        &=\mathcal{M}\mathcal{T}
+    \end{align*}
+
+    By Corollary \ref{cor:sym}, $\mathcal{M}$ and $\mathcal{T}$ are symmetric. Thus there norms are maximized by eigenvectors. In particular, we have
+    \begin{equation}\label{eq:M}
+        \lambda^*_M=\max_{x\perp \D\Psi_{M,1}} \frac{||\mathcal{M} x||}{||x||}.
+    \end{equation}
+    Then, it follows from Lemma \ref{lem:main} that for all $x$ one of the following is true. Either
+    \[||\mathcal{M}(\mathcal{T} x)||=||\mathcal{T}x||\text{ and } ||\mathcal{T}x||<||x||\] 
+    Or,
+    \[||\mathcal{T} x||=||x|| \text{ and } ||\mathcal{M}(\mathcal{T} x)||<||\mathcal{T}x||\] 
+    In all cases,
+    \[||\mathcal{P}x||=||\mathcal{M}(\mathcal{T}x)||<||x||=||\mathcal{M} x||\]
+    It then follows from equations \ref{eq:P} and \ref{eq:M} that
+    \[\lambda^*_P<\lambda^*_M\]
+\end{proof}
+
+\begin{thebibliography}{9}
+\bibitem{samberg}
+RT Journal Article
+A1 Sambridge, Malcolm
+T1 A Parallel Tempering algorithm for probabilistic sampling and multimodal optimization
+JF Geophysical Journal International
+JO Geophys J Int
+YR 2013
+DO 10.1093/gji/ggt342
+VO 196
+IS 1
+SP 357
+OP 374
+SN 0956-540X
+RD 5/24/2022
+UL https://doi.org/10.1093/gji/ggt342
+\bibitem{FI}
+Asja Fischer, Christian Igel,
+A bound for the convergence rate of parallel tempering for sampling restricted Boltzmann machines,
+Theoretical Computer Science,
+Volume 598,
+2015,
+Pages 102-117,
+ISSN 0304-3975,
+https://doi.org/10.1016/j.tcs.2015.05.019.
+(https://www.sciencedirect.com/science/article/pii/S0304397515004235)
+\bibitem{WSH}
+Dawn Woodard. Scott Schmidler. Mark Huber. "Sufficient Conditions for Torpid Mixing of Parallel and Simulated Tempering." Electron. J. Probab. 14 780 - 804, 2009. https://doi.org/10.1214/EJP.v14-638
+\end{thebibliography}
+\end{document}
